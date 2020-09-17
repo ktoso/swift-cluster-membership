@@ -16,8 +16,12 @@ import Metrics
 
 extension SWIM {
     public struct Metrics {
+        // ==== --------------------------------------------------------------------------------------------------------
+        // MARK: Membership
+
         /// Number of members (total)
         public let members: Gauge
+
         /// Number of members (alive)
         public let membersAlive: Gauge
         /// Number of members (suspect)
@@ -27,8 +31,11 @@ extension SWIM {
         /// Number of members (dead)
         public let membersDead: Gauge
 
+        // ==== --------------------------------------------------------------------------------------------------------
+        // MARK: Probe metrics
+
         /// Records time it takes for ping round-trips
-        public let roundTripTime: Timer // TODO: could do dimensions
+        public let roundTripTime: Timer
 
         /// Records time it takes for (every) pingRequest round-trip
         public let pingRequestResponseTimeAll: Timer
@@ -40,9 +47,14 @@ extension SWIM {
         /// as such the incarnation number *growth* is an interesting indicator of cluster observation churn.
         public let incarnation: Gauge
 
-        public let successfulProbeCount: Gauge
+        /// Total number of successful probes (pings with successful replies)
+        public let successfulProbes: Gauge
 
-        public let failedProbeCount: Gauge
+        /// Total number of failed probes (pings with successful replies)
+        public let failedProbes: Gauge
+
+        // ==== ----------------------------------------------------------------------------------------------------------------
+        // MARK: Total message count
 
         // TODO: message sizes (count and bytes)
         public let messageCountInbound: Counter
@@ -84,16 +96,15 @@ extension SWIM {
             )
             self.incarnation = Gauge(label: settings.metrics.makeLabel("incarnation"))
 
-            self.successfulProbeCount = Gauge(
+            self.successfulProbes = Gauge(
                 label: settings.metrics.makeLabel("incarnation"),
                 dimensions: [("type", "successful")]
             )
-            self.failedProbeCount = Gauge(
+            self.failedProbes = Gauge(
                 label: settings.metrics.makeLabel("incarnation"),
                 dimensions: [("type", "failed")]
             )
 
-            // TODO: how to best design the labels?
             self.messageCountInbound = Counter(
                 label: settings.metrics.makeLabel("message"),
                 dimensions: [
