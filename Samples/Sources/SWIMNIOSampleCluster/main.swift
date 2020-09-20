@@ -47,10 +47,10 @@ struct SWIMNIOSampleCluster: ParsableCommand {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 
         group.next().scheduleRepeatedTask(initialDelay: .seconds(1), delay: .seconds(1)) { _ in
-            let string: String = prom.collect()
-            print("")
-            print("")
-            print(string)
+            // let string: String = prom.collect()
+            // print("")
+            // print("")
+            // print(string)
         }
         
         let lifecycle = ServiceLifecycle()

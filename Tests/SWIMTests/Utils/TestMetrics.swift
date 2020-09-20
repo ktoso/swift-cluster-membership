@@ -130,6 +130,14 @@ extension TestMetrics {
         return testCounter
     }
 
+    public func expectGauge(_ metric: Gauge) throws -> TestRecorder {
+        return try self.expectRecorder(metric)
+    }
+
+    public func expectGauge(_ label: String, _ dimensions: [(String, String)] = []) throws -> TestRecorder {
+        return try self.expectRecorder(label, dimensions)
+    }
+
     public func expectRecorder(_ metric: Recorder) throws -> TestRecorder {
         metric.handler as! TestRecorder
     }

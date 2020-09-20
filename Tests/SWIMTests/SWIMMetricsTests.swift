@@ -63,25 +63,62 @@ final class SWIMMetricsTests: XCTestCase {
     let unreachable = [("status", "unreachable")]
     let dead = [("status", "dead")]
 
-    func test_members() {
-        let swim = SWIM.Instance(settings: .init(), myself: self.myself)
-        let m: SWIM.Metrics = swim.metrics
+    enum DowningMode {
+        case unreachable
+        case dead
+    }
 
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersAlive).lastValue, 1)
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersUnreachable).lastValue, 0)
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersDead).lastValue, 0)
+    func test_members_becoming_dead() {
+        self.shared_members(mode: .dead)
+    }
+
+    func test_members_becoming_dead() {
+        self.shared_members(mode: .dead)
+    }
+
+    func shared_members(mode: DowningMode) {
+        let swim = SWIM.Instance(settings: .init(), myself: self.myself)
+
+        self.expectMembership(swim, alive: 1, unreachable: 0, dead: 0)
 
         _ = swim.addMember(self.second, status: .alive(incarnation: 0))
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersAlive).lastValue, 2)
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersUnreachable).lastValue, 0)
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersDead).lastValue, 0)
+        self.expectMembership(swim, alive: 2, unreachable: 0, dead: 0)
 
         _ = swim.addMember(self.third, status: .alive(incarnation: 0))
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersAlive).lastValue, 3)
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersUnreachable).lastValue, 0)
-        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersDead).lastValue, 0)
+        self.expectMembership(swim, alive: 3, unreachable: 0, dead: 0)
 
         _ = swim.addMember(self.fourth, status: .alive(incarnation: 0))
         _ = swim.onPeriodicPingTick()
+        self.expectMembership(swim, alive: 4, unreachable: 0, dead: 0)
+
+        for _ in 0 ..< 10 {
+            _ = swim.onPingResponse(
+                response: .timeout(target: second, pingRequestOrigin: nil, timeout: .seconds(1), sequenceNumber: 0),
+                pingRequestOrigin: nil,
+                pingRequestSequenceNumber: nil
+            )
+        }
+        self.expectMembership(swim, alive: 3, unreachable: 0, dead: 1)
+
+        for _ in 0 ..< 10 {
+            _ = swim.onPingResponse(
+                response: .timeout(target: second, pingRequestOrigin: nil, timeout: .seconds(1), sequenceNumber: 0),
+                pingRequestOrigin: nil,
+                pingRequestSequenceNumber: nil
+            )
+        }
+        self.expectMembership(swim, alive: 3, unreachable: 0, dead: 2)
+    }
+}
+
+// ==== ----------------------------------------------------------------------------------------------------------------
+// MARK: Assertions
+
+extension SWIMMetricsTests {
+    private func expectMembership(_ swim: SWIM.Instance, alive: Double, unreachable: Double, dead: Double, file: StaticString = #file, line: UInt = #line) {
+        let m: SWIM.Metrics = swim.metrics
+        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersAlive).lastValue, alive, file: file, line: line)
+        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersUnreachable).lastValue, unreachable, file: file, line: line)
+        try XCTAssertEqual(self.testMetrics.expectRecorder(m.membersDead).lastValue, dead, file: file, line: line)
     }
 }
