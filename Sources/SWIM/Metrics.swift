@@ -25,21 +25,23 @@ extension SWIM {
         public let membersSuspect: Gauge
         /// Number of members (unreachable)
         public let membersUnreachable: Gauge
-        /// Number of members (dead) is not reported, because "dead" is considered "removed" from the cluster
+        // Number of members (dead) is not reported, because "dead" is considered "removed" from the cluster
         // -- no metric --
 
         /// Total number of nodes *ever* declared noticed as dead by this member
         public let membersTotalDead: Counter
 
+        /// The current number of tombstones for previously known (and now dead and removed) members.
+        public let removedDeadMemberTombstones: Gauge
+
+        // ==== --------------------------------------------------------------------------------------------------------
+        // MARK: Internal metrics
+
+        /// Current value of the local health multiplier.
+        public let localHealthMultiplier: Gauge
+
         // ==== --------------------------------------------------------------------------------------------------------
         // MARK: Probe metrics
-
-        /// Records time it takes for ping round-trips
-        public let roundTripTime: Timer
-
-        /// Records time it takes for (every) pingRequest round-trip
-        public let pingRequestResponseTimeAll: Timer
-        public let pingRequestResponseTimeFirst: Timer
 
         /// Records the incarnation of the SWIM instance.
         ///
@@ -48,20 +50,80 @@ extension SWIM {
         public let incarnation: Gauge
 
         /// Total number of successful probes (pings with successful replies)
-        public let successfulProbes: Gauge
+        public let successfulProbes: Counter
 
         /// Total number of failed probes (pings with successful replies)
-        public let failedProbes: Gauge
+        public let failedProbes: Counter
 
         // ==== ----------------------------------------------------------------------------------------------------------------
-        // MARK: Total message count
+        // MARK: Shell / Transport Metrics
 
-        // TODO: message sizes (count and bytes)
-        public let messageCountInbound: Counter
-        public let messageBytesInbound: Recorder
+        /// Metrics to be filled in by respective SWIM shell implementations.
+        public let shell: ShellMetrics
 
-        public let messageCountOutbound: Counter
-        public let messageBytesOutbound: Recorder
+        public struct ShellMetrics {
+            // ==== ----------------------------------------------------------------------------------------------------
+            // MARK: Probe metrics
+
+            /// Not reported automatically -- an implementation SHOULD report these metrics apropriately.
+            /// Records time it takes for ping round-trips
+            public let roundTripTime: Timer
+
+            /// Records time it takes for (every) pingRequest round-trip
+            public let pingRequestResponseTimeAll: Timer
+            public let pingRequestResponseTimeFirst: Timer
+
+            // TODO: message sizes (count and bytes)
+            public let messageCountInbound: Counter
+            public let messageBytesInbound: Recorder
+
+            public let messageCountOutbound: Counter
+            public let messageBytesOutbound: Recorder
+
+            public init(settings: SWIM.Settings) {
+                self.roundTripTime = Timer(label: settings.metrics.makeLabel("responseRoundTrip", "ping"))
+
+                self.pingRequestResponseTimeAll = Timer(
+                    label: settings.metrics.makeLabel("responseRoundTrip", "pingRequest"),
+                    dimensions: [("type", "all")]
+                )
+                self.pingRequestResponseTimeFirst = Timer(
+                    label: settings.metrics.makeLabel("responseRoundTrip", "pingRequest"),
+                    dimensions: [("type", "firstSuccessful")]
+                )
+
+                self.messageCountInbound = Counter(
+                    label: settings.metrics.makeLabel("message"),
+                    dimensions: [
+                        ("type", "count"),
+                        ("direction", "in"),
+                    ]
+                )
+                self.messageBytesInbound = Recorder(
+                    label: settings.metrics.makeLabel("message"),
+                    dimensions: [
+                        ("type", "bytes"),
+                        ("direction", "in"),
+                    ]
+                )
+
+                self.messageCountOutbound = Counter(
+                    label: settings.metrics.makeLabel("message"),
+                    dimensions: [
+                        ("type", "count"),
+                        ("direction", "out"),
+                    ]
+                )
+                self.messageBytesOutbound = Recorder(
+                    label: settings.metrics.makeLabel("message"),
+                    dimensions: [
+                        ("type", "bytes"),
+                        ("direction", "out"),
+                    ]
+                )
+            }
+        }
+
 
         public init(settings: SWIM.Settings) {
             self.membersAlive = Gauge(
@@ -80,56 +142,26 @@ extension SWIM {
                 label: settings.metrics.makeLabel("members"),
                 dimensions: [("status", "totalDead")]
             )
+            self.removedDeadMemberTombstones = Gauge(
+                label: settings.metrics.makeLabel("removedMemberTombstones")
+            )
 
-            self.roundTripTime = Timer(label: settings.metrics.makeLabel("responseRoundTrip", "ping"))
-            self.pingRequestResponseTimeAll = Timer(
-                label: settings.metrics.makeLabel("responseRoundTrip", "pingRequest"),
-                dimensions: [("type", "all")]
+            self.localHealthMultiplier = Gauge(
+                label: settings.metrics.makeLabel("lha")
             )
-            self.pingRequestResponseTimeFirst = Timer(
-                label: settings.metrics.makeLabel("responseRoundTrip", "pingRequest"),
-                dimensions: [("type", "firstSuccessful")]
-            )
+
             self.incarnation = Gauge(label: settings.metrics.makeLabel("incarnation"))
 
-            self.successfulProbes = Gauge(
+            self.successfulProbes = Counter(
                 label: settings.metrics.makeLabel("incarnation"),
                 dimensions: [("type", "successful")]
             )
-            self.failedProbes = Gauge(
+            self.failedProbes = Counter(
                 label: settings.metrics.makeLabel("incarnation"),
                 dimensions: [("type", "failed")]
             )
 
-            self.messageCountInbound = Counter(
-                label: settings.metrics.makeLabel("message"),
-                dimensions: [
-                    ("type", "count"),
-                    ("direction", "in"),
-                ]
-            )
-            self.messageBytesInbound = Recorder(
-                label: settings.metrics.makeLabel("message"),
-                dimensions: [
-                    ("type", "bytes"),
-                    ("direction", "in"),
-                ]
-            )
-
-            self.messageCountOutbound = Counter(
-                label: settings.metrics.makeLabel("message"),
-                dimensions: [
-                    ("type", "count"),
-                    ("direction", "out"),
-                ]
-            )
-            self.messageBytesOutbound = Recorder(
-                label: settings.metrics.makeLabel("message"),
-                dimensions: [
-                    ("type", "bytes"),
-                    ("direction", "out"),
-                ]
-            )
+            self.shell = .init(settings: settings)
         }
     }
 }
