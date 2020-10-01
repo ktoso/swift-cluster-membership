@@ -17,6 +17,7 @@ import ClusterMembership
 import Dispatch
 import Metrics
 @testable import SWIM
+import SWIMTestKit
 import XCTest
 
 final class SWIMMetricsTests: XCTestCase {
@@ -188,16 +189,16 @@ final class SWIMMetricsTests: XCTestCase {
         _ = swim.addMember(self.second, status: .alive(incarnation: 0))
         _ = swim.addMember(self.third, status: .alive(incarnation: 0))
 
-        XCTAssertEqual(try! testMetrics.expectRecorder(swim.metrics.localHealthMultiplier).lastValue, Double(0))
+        XCTAssertEqual(try! self.testMetrics.expectRecorder(swim.metrics.localHealthMultiplier).lastValue, Double(0))
 
         swim.adjustLHMultiplier(.failedProbe)
-        XCTAssertEqual(try! testMetrics.expectRecorder(swim.metrics.localHealthMultiplier).lastValue, Double(1))
+        XCTAssertEqual(try! self.testMetrics.expectRecorder(swim.metrics.localHealthMultiplier).lastValue, Double(1))
 
         swim.adjustLHMultiplier(.failedProbe)
-        XCTAssertEqual(try! testMetrics.expectRecorder(swim.metrics.localHealthMultiplier).lastValue, Double(2))
+        XCTAssertEqual(try! self.testMetrics.expectRecorder(swim.metrics.localHealthMultiplier).lastValue, Double(2))
 
         swim.adjustLHMultiplier(.successfulProbe)
-        XCTAssertEqual(try! testMetrics.expectRecorder(swim.metrics.localHealthMultiplier).lastValue, Double(1))
+        XCTAssertEqual(try! self.testMetrics.expectRecorder(swim.metrics.localHealthMultiplier).lastValue, Double(1))
     }
 }
 

@@ -207,8 +207,8 @@ extension SWIMNIOHandler {
             throw MissingDataError("No data to read")
         }
 
-        self.metrics?.messageCountInbound.increment()
-        self.metrics?.messageBytesInbound.record(bytes.readableBytes)
+        self.metrics?.messageInboundCount.increment()
+        self.metrics?.messageInboundBytes.record(bytes.readableBytes)
 
         let decoder = SWIMNIODefaultDecoder()
         decoder.userInfo[.channelUserInfoKey] = channel
@@ -219,8 +219,8 @@ extension SWIMNIOHandler {
         let encoder = SWIMNIODefaultEncoder()
         let data = try encoder.encode(message)
 
-        self.metrics?.messageCountOutbound.increment()
-        self.metrics?.messageBytesOutbound.record(data.count)
+        self.metrics?.messageOutboundCount.increment()
+        self.metrics?.messageOutboundBytes.record(data.count)
 
         let buffer = data.withUnsafeBytes { bytes -> ByteBuffer in
             var buffer = allocator.buffer(capacity: data.count)

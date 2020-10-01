@@ -74,11 +74,11 @@ extension SWIM {
             public let pingRequestResponseTimeFirst: Timer
 
             // TODO: message sizes (count and bytes)
-            public let messageCountInbound: Counter
-            public let messageBytesInbound: Recorder
+            public let messageInboundCount: Counter
+            public let messageInboundBytes: Recorder
 
-            public let messageCountOutbound: Counter
-            public let messageBytesOutbound: Recorder
+            public let messageOutboundCount: Counter
+            public let messageOutboundBytes: Recorder
 
             public init(settings: SWIM.Settings) {
                 self.roundTripTime = Timer(label: settings.metrics.makeLabel("responseRoundTrip", "ping"))
@@ -92,14 +92,14 @@ extension SWIM {
                     dimensions: [("type", "firstSuccessful")]
                 )
 
-                self.messageCountInbound = Counter(
+                self.messageInboundCount = Counter(
                     label: settings.metrics.makeLabel("message"),
                     dimensions: [
                         ("type", "count"),
                         ("direction", "in"),
                     ]
                 )
-                self.messageBytesInbound = Recorder(
+                self.messageInboundBytes = Recorder(
                     label: settings.metrics.makeLabel("message"),
                     dimensions: [
                         ("type", "bytes"),
@@ -107,14 +107,14 @@ extension SWIM {
                     ]
                 )
 
-                self.messageCountOutbound = Counter(
+                self.messageOutboundCount = Counter(
                     label: settings.metrics.makeLabel("message"),
                     dimensions: [
                         ("type", "count"),
                         ("direction", "out"),
                     ]
                 )
-                self.messageBytesOutbound = Recorder(
+                self.messageOutboundBytes = Recorder(
                     label: settings.metrics.makeLabel("message"),
                     dimensions: [
                         ("type", "bytes"),
@@ -123,7 +123,6 @@ extension SWIM {
                 )
             }
         }
-
 
         public init(settings: SWIM.Settings) {
             self.membersAlive = Gauge(

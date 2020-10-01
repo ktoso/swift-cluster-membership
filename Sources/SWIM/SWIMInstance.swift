@@ -307,7 +307,6 @@ extension SWIM {
         public var localHealthMultiplier = 0 {
             didSet {
                 assert(self.localHealthMultiplier >= 0, "localHealthMultiplier MUST NOT be < 0, but was: \(self.localHealthMultiplier)")
-                print("self.localHealthMultiplier = \(self.localHealthMultiplier)")
                 self.metrics.localHealthMultiplier.record(self.localHealthMultiplier)
             }
         }
