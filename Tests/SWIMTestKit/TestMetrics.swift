@@ -236,11 +236,9 @@ public final class TestCounter: TestMetric, CounterHandler, Equatable {
         }
     }
 
-    public var totalValue: Int64? {
+    public var totalValue: Int64 {
         self.lock.withLock {
-            values.map {
-                $0.1
-            }.reduce(0, +)
+            values.map { $0.1 }.reduce(0, +)
         }
     }
 
@@ -315,7 +313,7 @@ public final class TestTimer: TestMetric, TimerHandler, Equatable {
     }
 
     let lock = NSLock()
-    private var values = [(Date, Int64)]()
+    private var _values = [(Date, Int64)]()
 
     init(label: String, dimensions: [(String, String)]) {
         self.id = NSUUID().uuidString
@@ -332,7 +330,7 @@ public final class TestTimer: TestMetric, TimerHandler, Equatable {
 
     func retrieveValueInPreferredUnit(atIndex i: Int) -> Double {
         self.lock.withLock {
-            let value = values[i].1
+            let value = _values[i].1
             guard let displayUnit = self.displayUnit else {
                 return Double(value)
             }
@@ -342,20 +340,26 @@ public final class TestTimer: TestMetric, TimerHandler, Equatable {
 
     public func recordNanoseconds(_ duration: Int64) {
         self.lock.withLock {
-            values.append((Date(), duration))
+            _values.append((Date(), duration))
         }
         print("recording \(duration) in \(self.label)\(self.dimensions.map { "\($0):\($1)" })")
     }
 
     public var lastValue: Int64? {
         self.lock.withLock {
-            values.last?.1
+            _values.last?.1
+        }
+    }
+
+    public var values: [Int64] {
+        self.lock.withLock {
+            _values.map { $0.1 }
         }
     }
 
     public var last: (Date, Int64)? {
         self.lock.withLock {
-            values.last
+            _values.last
         }
     }
 

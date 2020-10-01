@@ -1083,7 +1083,7 @@ extension SWIM.Instance {
         pingRequestSequenceNumber: SWIM.SequenceNumber?,
         sequenceNumber: SWIM.SequenceNumber
     ) -> [PingResponseDirective] {
-        self.metrics.successfulProbes.increment()
+        self.metrics.successfulPingProbes.increment()
 
         var directives: [PingResponseDirective] = []
         // We're proxying an ack payload from ping target back to ping source.
@@ -1123,7 +1123,7 @@ extension SWIM.Instance {
         sequenceNumber: SWIM.SequenceNumber
     ) -> [PingResponseDirective] {
         // yes, a nack is "successful" -- we did get a reply from the peer we contacted after all
-        self.metrics.successfulProbes.increment()
+        self.metrics.successfulPingProbes.increment()
 
         // Important:
         // We do _nothing_ here, however we actually handle nacks implicitly in today's SWIMNIO implementation...
@@ -1141,7 +1141,7 @@ extension SWIM.Instance {
         pingRequestOrigin: SWIMPingRequestOriginPeer?,
         pingRequestSequenceNumber: SWIM.SequenceNumber?
     ) -> [PingResponseDirective] {
-        self.metrics.failedProbes.increment()
+        self.metrics.failedPingProbes.increment()
 
         var directives: [PingResponseDirective] = []
         if let pingRequestOrigin = pingRequestOrigin,
@@ -1419,9 +1419,13 @@ extension SWIM.Instance {
         switch result {
         case .timeout:
             // Failed pingRequestResponse indicates a missed nack, we should adjust LHMultiplier
+            self.metrics.failedPingRequestProbes.increment()
             self.adjustLHMultiplier(.probeWithMissedNack)
-        default:
-            () // Successful pingRequestResponse should be handled only once (and thus in `onPingRequestResponse` only)
+        case .ack, .nack:
+            // Successful pingRequestResponse should be handled only once (and thus in `onPingRequestResponse` only),
+            // however we can nicely handle all responses here for purposes of metrics (and NOT adjust them in the onPingRequestResponse
+            // since that would lead to double-counting successes)
+            self.metrics.successfulPingRequestProbes.increment()
         }
 
         return [] // just so happens that we never actually perform any actions here (so far, keeping the return type for future compatibility)

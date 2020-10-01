@@ -168,7 +168,7 @@ public final class SWIMNIOHandler: ChannelDuplexHandler {
                     self.log.trace("Received response, key: \(callbackKey); Invoking callback...", metadata: [
                         "pending/callbacks": Logger.MetadataValue.array(self.pendingReplyCallbacks.map { "\($0)" }),
                     ])
-                    self.metrics?.roundTripTime.recordNanoseconds(storedKey.nanosecondsSinceCallbackStored().nanoseconds)
+                    self.metrics?.pingResponseTime.recordNanoseconds(storedKey.nanosecondsSinceCallbackStored().nanoseconds)
                     callback(.success(message))
                 } else {
                     self.log.trace("No callback for \(callbackKey); It may have been removed due to a timeout already.", metadata: [
@@ -208,7 +208,7 @@ extension SWIMNIOHandler {
         }
 
         self.metrics?.messageInboundCount.increment()
-        self.metrics?.messageInboundBytes.record(bytes.readableBytes)
+        self.metrics?.messageInboundBytes.record(data.count)
 
         let decoder = SWIMNIODefaultDecoder()
         decoder.userInfo[.channelUserInfoKey] = channel

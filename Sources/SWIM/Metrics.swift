@@ -15,6 +15,9 @@
 import Metrics
 
 extension SWIM {
+    /// Object containing all metrics a SWIM instance and shell should be reporting.
+    ///
+    /// - SeeAlso: `SWIM.Metrics.Shell` for metrics that a specific implementation should emit
     public struct Metrics {
         // ==== --------------------------------------------------------------------------------------------------------
         // MARK: Membership
@@ -50,10 +53,16 @@ extension SWIM {
         public let incarnation: Gauge
 
         /// Total number of successful probes (pings with successful replies)
-        public let successfulProbes: Counter
-
+        public let successfulPingProbes: Counter
         /// Total number of failed probes (pings with successful replies)
-        public let failedProbes: Counter
+        public let failedPingProbes: Counter
+
+        /// Total number of successful ping request probes (pingRequest with successful replies)
+        /// Either an .ack or .nack from the intermediary node count as an success here
+        public let successfulPingRequestProbes: Counter
+        /// Total number of failed ping request probes (pings requests with successful replies)
+        /// Only a .timeout counts as a failed ping request.
+        public let failedPingRequestProbes: Counter
 
         // ==== ----------------------------------------------------------------------------------------------------------------
         // MARK: Shell / Transport Metrics
@@ -65,31 +74,37 @@ extension SWIM {
             // ==== ----------------------------------------------------------------------------------------------------
             // MARK: Probe metrics
 
-            /// Not reported automatically -- an implementation SHOULD report these metrics apropriately.
-            /// Records time it takes for ping round-trips
-            public let roundTripTime: Timer
+            /// Records time it takes for ping successful round-trips.
+            public let pingResponseTime: Timer
 
-            /// Records time it takes for (every) pingRequest round-trip
+            /// Records time it takes for (every) successful pingRequest round-trip
             public let pingRequestResponseTimeAll: Timer
+            /// Records the time it takes for the (first) successful pingRequest to round trip
+            /// (A ping request hits multiple intermediary peers, the first reply is what counts)
             public let pingRequestResponseTimeFirst: Timer
 
-            // TODO: message sizes (count and bytes)
+            /// Number of incoming messages received
             public let messageInboundCount: Counter
+            /// Sizes of messages received, in bytes
             public let messageInboundBytes: Recorder
 
+            /// Number of messages sent
             public let messageOutboundCount: Counter
+            /// Sizes of messages sent, in bytes
             public let messageOutboundBytes: Recorder
 
             public init(settings: SWIM.Settings) {
-                self.roundTripTime = Timer(label: settings.metrics.makeLabel("responseRoundTrip", "ping"))
+                self.pingResponseTime = Timer(
+                    label: settings.metrics.makeLabel("roundTripTime", "ping")
+                )
 
                 self.pingRequestResponseTimeAll = Timer(
-                    label: settings.metrics.makeLabel("responseRoundTrip", "pingRequest"),
+                    label: settings.metrics.makeLabel("roundTripTime", "pingRequest"),
                     dimensions: [("type", "all")]
                 )
                 self.pingRequestResponseTimeFirst = Timer(
-                    label: settings.metrics.makeLabel("responseRoundTrip", "pingRequest"),
-                    dimensions: [("type", "firstSuccessful")]
+                    label: settings.metrics.makeLabel("roundTripTime", "pingRequest"),
+                    dimensions: [("type", "firstAck")]
                 )
 
                 self.messageInboundCount = Counter(
@@ -151,12 +166,21 @@ extension SWIM {
 
             self.incarnation = Gauge(label: settings.metrics.makeLabel("incarnation"))
 
-            self.successfulProbes = Counter(
-                label: settings.metrics.makeLabel("incarnation"),
+            self.successfulPingProbes = Counter(
+                label: settings.metrics.makeLabel("probe", "ping"),
                 dimensions: [("type", "successful")]
             )
-            self.failedProbes = Counter(
-                label: settings.metrics.makeLabel("incarnation"),
+            self.failedPingProbes = Counter(
+                label: settings.metrics.makeLabel("probe", "ping"),
+                dimensions: [("type", "failed")]
+            )
+
+            self.successfulPingRequestProbes = Counter(
+                label: settings.metrics.makeLabel("probe", "pingRequest"),
+                dimensions: [("type", "successful")]
+            )
+            self.failedPingRequestProbes = Counter(
+                label: settings.metrics.makeLabel("probe", "pingRequest"),
                 dimensions: [("type", "failed")]
             )
 
